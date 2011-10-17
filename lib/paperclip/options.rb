@@ -26,6 +26,7 @@ module Paperclip
       @use_timestamp         = hash[:use_timestamp]
       @whiny                 = hash[:whiny_thumbnails] || hash[:whiny]
       @use_default_time_zone = hash[:use_default_time_zone]
+      @use_file_command      = hash[:use_file_command]
       @hash_digest           = hash[:hash_digest]
       @hash_data             = hash[:hash_data]
       @hash_secret           = hash[:hash_secret]

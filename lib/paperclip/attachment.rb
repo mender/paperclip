@@ -103,10 +103,12 @@ module Paperclip
 
       return nil if uploaded_file.nil?
 
-      uploaded_filename ||= uploaded_file.original_filename
+      uploaded_filename            ||= uploaded_file.original_filename
+      uploaded_content_type          = extract_content_type(uploaded_file)
+      uploaded_filename              = rewrite_extension(uploaded_filename, uploaded_content_type)
       @queued_for_write[:original]   = to_tempfile(uploaded_file)
       instance_write(:file_name,       uploaded_filename.strip)
-      instance_write(:content_type,    uploaded_file.content_type.to_s.strip)
+      instance_write(:content_type,    uploaded_content_type)
       instance_write(:file_size,       uploaded_file.size.to_i)
       instance_write(:fingerprint,     generate_fingerprint(uploaded_file))
       instance_write(:updated_at,      Time.now)
@@ -249,6 +251,16 @@ module Paperclip
       end
     end
 
+    def extract_content_type(source)
+      if @options.use_file_command && source.respond_to?(:type_from_file_command)
+        source.type_from_file_command
+      elsif source.respond_to?(:content_type)
+        source.content_type
+      else
+        nil
+      end
+    end
+
     # Paths and URLs can have a number of variables interpolated into them
     # to vary the storage location based on name, id, style, class, etc.
     # This method is a deprecated access into supplying and retrieving these
@@ -316,6 +328,29 @@ module Paperclip
     end
 
     private
+
+    def rewrite_extension(original_filename, content_type)
+      original_extension = File.extname(original_filename)
+      original_basename  = File.basename(original_filename, original_extension)
+      original_extension = original_extension.sub(/^\.+/, '')
+
+      mime_type     = MIME::Types[content_type]
+      extensions    = mime_type.empty? ? [] : mime_type.first.extensions
+      extension     = if extensions.include?(original_extension)
+        original_extension
+      elsif extensions.present?
+        extensions.first
+      else
+        %r{/([^/]*)$}.match(content_type)[1]
+      end
+      puts "#{original_filename} #{content_type} #{extension}"
+
+      if extension.present? && original_extension != extension
+        original_basename + '.' + extension
+      else
+        original_filename
+      end
+    end
 
     def ensure_required_accessors! #:nodoc:
       %w(file_name).each do |field|
