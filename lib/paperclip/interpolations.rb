@@ -93,7 +93,7 @@ module Paperclip
     # If the style has a format defined, it will return the format instead
     # of the actual extension.
     def extension attachment, style_name
-      return File.extname(attachment.original_filename).gsub(/^\.+/, "") if attachment.instance.created_at <= Time.utc(2011, 10, 17, 10, 0, 0)
+      return File.extname(attachment.original_filename).gsub(/^\.+/, "") if attachment.instance.created_at <= Time.utc(2011, 10, 17, 8, 30, 0)
 
       style = attachment.styles[style_name]
       ext   = (style && style[:format]) || File.extname(attachment.original_filename).gsub(/^\.+/, "")
