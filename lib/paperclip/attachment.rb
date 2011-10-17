@@ -253,9 +253,9 @@ module Paperclip
 
     def extract_content_type(source)
       if @options.use_file_command && source.respond_to?(:type_from_file_command)
-        source.type_from_file_command
+        source.type_from_file_command.to_s.strip
       elsif source.respond_to?(:content_type)
-        source.content_type
+        source.content_type.to_s.strip
       else
         nil
       end
