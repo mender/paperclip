@@ -104,10 +104,9 @@ module Paperclip
       return nil if uploaded_file.nil?
 
       uploaded_filename            ||= uploaded_file.original_filename
-      uploaded_content_type          = extract_content_type(uploaded_file)
-      uploaded_filename              = rewrite_extension(uploaded_filename, uploaded_content_type)
       @queued_for_write[:original]   = to_tempfile(uploaded_file)
-      instance_write(:file_name,       uploaded_filename.strip)
+      uploaded_content_type          = extract_content_type(@queued_for_write[:original])
+      instance_write(:file_name,       rewrite_extension(uploaded_filename, uploaded_content_type).strip)
       instance_write(:content_type,    uploaded_content_type)
       instance_write(:file_size,       uploaded_file.size.to_i)
       instance_write(:fingerprint,     generate_fingerprint(uploaded_file))
