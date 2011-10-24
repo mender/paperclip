@@ -6,7 +6,7 @@ module Paperclip
 
   class Style
 
-    attr_reader :name, :attachment, :format
+    attr_reader :name, :attachment, :except_formats
 
     # Creates a Style object. +name+ is the name of the attachment,
     # +definition+ is the style definition from has_attached_file, which
@@ -17,6 +17,7 @@ module Paperclip
       if definition.is_a? Hash
         @geometry = definition.delete(:geometry)
         @format = definition.delete(:format)
+        self.except_formats = definition.delete(:except_formats)
         @processors = definition.delete(:processors)
         @other_args = definition
       else
@@ -76,7 +77,7 @@ module Paperclip
     # Supports getting and setting style properties with hash notation to ensure backwards-compatibility
     # eg. @attachment.options.styles[:large][:geometry]@ will still work
     def [](key)
-      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :animated, :source_file_options].include?(key)
+      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :except_formats, :animated, :source_file_options].include?(key)
         send(key)
       elsif defined? @other_args[key]
         @other_args[key]
@@ -84,11 +85,23 @@ module Paperclip
     end
 
     def []=(key, value)
-      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :animated, :source_file_options].include?(key)
+      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :except_formats, :animated, :source_file_options].include?(key)
         send("#{key}=".intern, value)
       else
         @other_args[key] = value
       end
+    end
+
+    def except_formats=(formats)
+      @except_formats = formats.respond_to?(:split) ? formats.split(/\s+/) : formats
+    end
+
+    def format
+      if @except_formats.present? && (filename = attachment.original_filename)
+        ext = File.extname(filename)[1..-1]
+        return ext if @except_formats.include?(ext)
+      end
+      @format
     end
 
   end

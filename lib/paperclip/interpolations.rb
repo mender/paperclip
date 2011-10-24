@@ -97,16 +97,8 @@ module Paperclip
         return File.extname(attachment.original_filename).gsub(/^\.+/, "")
       end
 
-      style = attachment.styles[style_name]
-      ext   = (style && style[:format]) || File.extname(attachment.original_filename).gsub(/^\.+/, "")
-
-      if style && (except_formats = style[:except_formats])
-        except_formats = except_formats.split(/\s+/) if except_formats.respond_to?(:split)
-        original_ext   = File.extname(attachment.original_filename).gsub(/^\.+/, "")
-        ext            = original_ext if except_formats.include?(original_ext)
-      end
-
-      ext
+      ((style = attachment.styles[style_name]) && style[:format]) ||
+        File.extname(attachment.original_filename).gsub(/^\.+/, "")
     end
 
     # Returns an extension based on the content type. e.g. "jpeg" for "image/jpeg".
