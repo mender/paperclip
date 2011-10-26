@@ -339,8 +339,8 @@ module Paperclip
         original_extension
       elsif extensions.present?
         extensions.first
-      else
-        %r{/([^/]*)$}.match(content_type)[1]
+      #else
+      #  %r{/([^/]*)$}.match(content_type)[1]
       end
 
       if extension.present? && original_extension != extension
