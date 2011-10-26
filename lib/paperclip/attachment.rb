@@ -339,10 +339,9 @@ module Paperclip
         original_extension
       elsif extensions.present?
         extensions.first
-      else
-        %r{/([^/]*)$}.match(content_type)[1]
+      #else
+      #  %r{/([^/]*)$}.match(content_type)[1]
       end
-      puts "#{original_filename} #{content_type} #{extension}"
 
       if extension.present? && original_extension != extension
         original_basename + '.' + extension
