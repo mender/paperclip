@@ -338,12 +338,14 @@ module Paperclip
       original_basename     = File.basename(original_filename, original_extension)
       original_extension    = original_extension.sub(/^\.+/, '')
 
-      if (style = styles[:original]) && style[:format].present?
-        extension = style[:format]
+      mime_type  = MIME::Types[original_content_type]
+      extensions = mime_type.empty? ? [] : mime_type.first.extensions
+
+      formats = ((style = styles[:original]) && style[:formats]) || []
+      if formats.present?
+        extension = (formats & extensions || []).first || formats.first
       else
-        mime_type  = MIME::Types[original_content_type]
-        extensions = mime_type.empty? ? [] : mime_type.first.extensions
-        extension  = if extensions.include?(original_extension)
+        extension = if extensions.include?(original_extension)
           original_extension
         elsif extensions.present?
           extensions.first
