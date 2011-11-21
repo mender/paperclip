@@ -103,14 +103,17 @@ module Paperclip
 
       return nil if uploaded_file.nil?
 
-      uploaded_filename            ||= uploaded_file.original_filename
-      @queued_for_write[:original]   = to_tempfile(uploaded_file)
-      uploaded_content_type          = extract_content_type(@queued_for_write[:original])
-      instance_write(:file_name,       rewrite_extension(uploaded_filename, uploaded_content_type).strip)
-      instance_write(:content_type,    uploaded_content_type)
-      instance_write(:file_size,       uploaded_file.size.to_i)
-      instance_write(:fingerprint,     generate_fingerprint(uploaded_file))
-      instance_write(:updated_at,      Time.now)
+      uploaded_filename          ||= uploaded_file.original_filename
+      @queued_for_write[:original] = to_tempfile(uploaded_file)
+      uploaded_content_type        = extract_content_type(@queued_for_write[:original])
+      instance_write(:file_name,     uploaded_filename.strip)
+      instance_write(:content_type,  uploaded_content_type)
+      instance_write(:file_size,     @queued_for_write[:original].size.to_i)
+      instance_write(:fingerprint,   generate_fingerprint(uploaded_file))
+      instance_write(:updated_at,    Time.now)
+
+      instance_write(:file_name,     real_filename)
+      instance_write(:content_type,  format_content_type)
 
       @dirty = true
 
@@ -328,25 +331,40 @@ module Paperclip
 
     private
 
-    def rewrite_extension(original_filename, content_type)
-      original_extension = File.extname(original_filename)
-      original_basename  = File.basename(original_filename, original_extension)
-      original_extension = original_extension.sub(/^\.+/, '')
+    def real_filename
+      original_filename     = self.original_filename or return
+      original_content_type = self.content_type      or return original_filename
+      original_extension    = File.extname(original_filename)
+      original_basename     = File.basename(original_filename, original_extension)
+      original_extension    = original_extension.sub(/^\.+/, '')
 
-      mime_type     = MIME::Types[content_type]
-      extensions    = mime_type.empty? ? [] : mime_type.first.extensions
-      extension     = if extensions.include?(original_extension)
-        original_extension
-      elsif extensions.present?
-        extensions.first
-      #else
-      #  %r{/([^/]*)$}.match(content_type)[1]
+      if (style = styles[:original]) && style[:format].present?
+        extension = style[:format]
+      else
+        mime_type  = MIME::Types[original_content_type]
+        extensions = mime_type.empty? ? [] : mime_type.first.extensions
+        extension  = if extensions.include?(original_extension)
+          original_extension
+        elsif extensions.present?
+          extensions.first
+        end
       end
 
-      if extension.present? && original_extension != extension
+      if extension.present?
         original_basename + '.' + extension
       else
         original_filename
+      end
+    end
+
+    def format_content_type
+      content_type = self.content_type
+      filename     = self.original_filename or return content_type
+
+      if (types = MIME::Types.type_for(filename)).present?
+        types.first.content_type
+      else
+        content_type
       end
     end
 
