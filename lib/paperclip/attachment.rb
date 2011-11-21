@@ -108,7 +108,7 @@ module Paperclip
       uploaded_content_type        = extract_content_type(@queued_for_write[:original])
       instance_write(:file_name,     uploaded_filename.strip)
       instance_write(:content_type,  uploaded_content_type)
-      instance_write(:file_size,     uploaded_file.size.to_i)
+      instance_write(:file_size,     @queued_for_write[:original].size.to_i)
       instance_write(:fingerprint,   generate_fingerprint(uploaded_file))
       instance_write(:updated_at,    Time.now)
 
