@@ -112,15 +112,17 @@ module Paperclip
       instance_write(:fingerprint,   generate_fingerprint(uploaded_file))
       instance_write(:updated_at,    Time.now)
 
-      instance_write(:file_name,     real_filename)
-      instance_write(:content_type,  format_content_type)
+      if valid_media_type?(format_content_type)
+        instance_write(:file_name,    real_filename)
+        instance_write(:content_type, format_content_type)
+      end
 
       @dirty = true
 
       post_process(*@options.only_process) if post_processing
 
       # Reset the file size if the original file was reprocessed.
-      instance_write(:file_size,   @queued_for_write[:original].size.to_i)
+      #instance_write(:file_size,   @queued_for_write[:original].size.to_i)
       instance_write(:fingerprint, generate_fingerprint(@queued_for_write[:original]))
     ensure
       uploaded_file.close if close_uploaded_file
@@ -368,6 +370,16 @@ module Paperclip
       else
         content_type
       end
+    end
+
+    def valid_media_type?(content_type)
+      original_content_type = self.content_type
+
+      original_content_type = MIME::Type.new(original_content_type) if original_content_type.is_a?(String)
+      content_type          = MIME::Type.new(content_type)          if content_type.is_a?(String)
+      return false unless content_type.respond_to?(:media_type)
+
+      original_content_type.blank? || (original_content_type.media_type == content_type.media_type)
     end
 
     def ensure_required_accessors! #:nodoc:
