@@ -92,6 +92,7 @@ module Paperclip
     end
 
     def formats=(formats)
+      return [] unless formats
       @formats = formats.respond_to?(:split) ? formats.split(/\s+/) : formats.flatten
     end
     alias_method :format=, :formats=
