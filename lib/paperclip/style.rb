@@ -6,7 +6,7 @@ module Paperclip
 
   class Style
 
-    attr_reader :name, :attachment, :format
+    attr_reader :name, :attachment, :formats
 
     # Creates a Style object. +name+ is the name of the attachment,
     # +definition+ is the style definition from has_attached_file, which
@@ -15,15 +15,16 @@ module Paperclip
       @name = name
       @attachment = attachment
       if definition.is_a? Hash
-        @geometry = definition.delete(:geometry)
-        @format = definition.delete(:format)
+        @geometry   = definition.delete(:geometry)
+        self.format = definition.delete(:format) || definition.delete(:formats)
         @processors = definition.delete(:processors)
         @other_args = definition
       else
-        @geometry, @format = [definition, nil].flatten[0..1]
+        definition  = [definition].flatten
+        @geometry   = definition.shift
+        self.format = definition
         @other_args = {}
       end
-      @format  = nil if @format.blank?
     end
 
     # retrieves from the attachment the processors defined in the has_attached_file call
@@ -76,7 +77,7 @@ module Paperclip
     # Supports getting and setting style properties with hash notation to ensure backwards-compatibility
     # eg. @attachment.options.styles[:large][:geometry]@ will still work
     def [](key)
-      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :animated, :source_file_options].include?(key)
+      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :formats, :animated, :source_file_options].include?(key)
         send(key)
       elsif defined? @other_args[key]
         @other_args[key]
@@ -84,10 +85,28 @@ module Paperclip
     end
 
     def []=(key, value)
-      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :animated, :source_file_options].include?(key)
+      if [:name, :convert_options, :whiny, :processors, :geometry, :format, :formats, :animated, :source_file_options].include?(key)
         send("#{key}=".intern, value)
       else
         @other_args[key] = value
+      end
+    end
+
+    def formats=(formats)
+      @formats = [formats].flatten.map do |format|
+        format.is_a?(String) ? format.split(/\s+/) : format
+      end.flatten.delete_if(&:blank?)
+    end
+    alias_method :format=, :formats=
+
+    def format
+      if @formats.present? && (filename = attachment.original_filename)
+        ext = File.extname(filename)[1..-1]
+        @formats.find { |format| format.to_s == ext } || @formats.first
+      elsif @formats.present?
+        @formats.first
+      else
+        nil
       end
     end
 

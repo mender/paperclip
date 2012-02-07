@@ -5,6 +5,9 @@ class MockAttachment < Struct.new(:one, :two)
   def instance
     self
   end
+  def original_filename
+    nil
+  end
 end
 
 class OptionsTest < Test::Unit::TestCase

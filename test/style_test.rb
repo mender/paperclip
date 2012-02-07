@@ -177,4 +177,95 @@ class StyleTest < Test::Unit::TestCase
       assert_equal [:test], @attachment.options.styles[:foo].processors
     end
   end
+
+  context "A style rule with multiple formats definition" do
+    context "in various forms" do
+      setup do
+        styles = ActiveSupport::OrderedHash.new
+        styles[:aslist]  = ["100x100", ['png jpg gif']]
+        styles[:aslist2] = ["100x100", ['png', 'jpg', 'gif']]
+        styles[:ashash]  = {:geometry => "100x100", :format => 'png jpg gif'}
+        styles[:ashash2] = {:geometry => "100x100", :format => ['png', 'jpg', 'gif']}
+        @attachment = attachment :path => ":basename.:extension",
+                                 :styles => styles
+      end
+
+      should "have the right formats" do
+        @attachment.options.styles.each do |name, style|
+          assert_equal style.formats, ['png', 'jpg', 'gif'], "<#{name}> style"
+        end
+      end
+
+      should "have the right format" do
+        @attachment.options.styles.each do |name, style|
+          assert_equal style.format, 'png', "<#{name}> style"
+        end
+      end
+    end
+    
+    context "if empty formats" do
+      setup do
+        styles = ActiveSupport::OrderedHash.new
+        styles[:asnil]    = ["100x100", nil]
+        styles[:asarray]  = {:geometry => "100x100", :format => []}
+        styles[:asarray2] = {:geometry => "100x100", :format => [' ']}
+        styles[:asstring] = ["100x100", '  ']
+        styles[:asempty]  = "100x100"
+        @attachment = attachment :path => ":basename.:extension",
+                                 :styles => styles
+      end
+
+      should "not have formats" do
+        @attachment.options.styles.each do |name, style|
+          assert_equal style.formats, [], "<#{name}> style"
+        end  
+      end
+
+      should "not have farmat" do
+        @attachment.options.styles.each do |name, style|
+          assert_equal style.format, nil, "<#{name}> style"
+        end  
+      end
+    end
+
+    context "if :format and :formats both specified" do
+      setup do
+        @attachment = attachment :path => ":basename.:extension",
+                                 :styles => {
+                                   :default => {
+                                     :geometry => "100x100", 
+                                     :format => :png, 
+                                     :formats => 'jpg gif'
+                                   }
+                                 }
+      end
+
+      should "use :format instead of :formats" do
+        assert_equal @attachment.options.styles[:default].formats, [:png]
+        assert_equal @attachment.options.styles[:default].format, :png
+      end
+    end
+
+    context "if attachment has original_filename" do
+      setup do
+        @attachment = attachment :path => ":basename.:extension",
+                                 :styles => { :default => ["100x100", [:png, :jpg, :gif]] },
+                                 :default_style => :default
+        @file = StringIO.new("...")                         
+      end
+
+      should "have the right format if filename is valid" do
+        @file.stubs(:original_filename).returns("file.jpg")
+        @attachment.assign(@file)
+        assert_equal :jpg, @attachment.options.styles[:default].format
+      end
+    
+      should "return default format if filename is invalid" do
+        @file.stubs(:original_filename).returns("file.bmp")
+        @attachment.assign(@file)
+        assert_equal :png, @attachment.options.styles[:default].format
+      end
+    end
+  end
 end
+
