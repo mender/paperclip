@@ -103,20 +103,26 @@ module Paperclip
 
       return nil if uploaded_file.nil?
 
-      uploaded_filename ||= uploaded_file.original_filename
-      @queued_for_write[:original]   = to_tempfile(uploaded_file)
-      instance_write(:file_name,       uploaded_filename.strip)
-      instance_write(:content_type,    uploaded_file.content_type.to_s.strip)
-      instance_write(:file_size,       uploaded_file.size.to_i)
-      instance_write(:fingerprint,     generate_fingerprint(uploaded_file))
-      instance_write(:updated_at,      Time.now)
+      uploaded_filename          ||= uploaded_file.original_filename
+      @queued_for_write[:original] = to_tempfile(uploaded_file)
+      uploaded_content_type        = extract_content_type(@queued_for_write[:original])
+      instance_write(:file_name,     uploaded_filename.strip)
+      instance_write(:content_type,  uploaded_content_type)
+      instance_write(:file_size,     @queued_for_write[:original].size.to_i)
+      instance_write(:fingerprint,   generate_fingerprint(uploaded_file))
+      instance_write(:updated_at,    Time.now)
+
+      if valid_media_type?(format_content_type)
+        instance_write(:file_name,    real_filename)
+        instance_write(:content_type, format_content_type)
+      end
 
       @dirty = true
 
       post_process(*@options.only_process) if post_processing
 
       # Reset the file size if the original file was reprocessed.
-      instance_write(:file_size,   @queued_for_write[:original].size.to_i)
+      #instance_write(:file_size,   @queued_for_write[:original].size.to_i)
       instance_write(:fingerprint, generate_fingerprint(@queued_for_write[:original]))
     ensure
       uploaded_file.close if close_uploaded_file
@@ -249,6 +255,16 @@ module Paperclip
       end
     end
 
+    def extract_content_type(source)
+      if @options.use_file_command && source.respond_to?(:type_from_file_command)
+        source.type_from_file_command.to_s.strip
+      elsif source.respond_to?(:content_type)
+        source.content_type.to_s.strip
+      else
+        nil
+      end
+    end
+
     # Paths and URLs can have a number of variables interpolated into them
     # to vary the storage location based on name, id, style, class, etc.
     # This method is a deprecated access into supplying and retrieving these
@@ -316,6 +332,55 @@ module Paperclip
     end
 
     private
+
+    def real_filename
+      original_filename     = self.original_filename or return
+      original_content_type = self.content_type      or return original_filename
+      original_extension    = File.extname(original_filename)
+      original_basename     = File.basename(original_filename, original_extension)
+      original_extension    = original_extension.sub(/^\.+/, '')
+
+      mime_type  = MIME::Types[original_content_type]
+      extensions = mime_type.empty? ? [] : mime_type.first.extensions
+
+      formats = ((style = styles[:original]) && style[:formats]) || []
+      if formats.present?
+        extension = (formats & extensions || []).first || formats.first
+      else
+        extension = if extensions.include?(original_extension)
+          original_extension
+        elsif extensions.present?
+          extensions.first
+        end
+      end
+
+      if extension.present?
+        original_basename + '.' + extension
+      else
+        original_filename
+      end
+    end
+
+    def format_content_type
+      content_type = self.content_type
+      filename     = self.original_filename or return content_type
+
+      if (types = MIME::Types.type_for(filename)).present?
+        types.first.content_type
+      else
+        content_type
+      end
+    end
+
+    def valid_media_type?(content_type)
+      original_content_type = self.content_type
+
+      original_content_type = MIME::Type.new(original_content_type) if original_content_type.is_a?(String)
+      content_type          = MIME::Type.new(content_type)          if content_type.is_a?(String)
+      return false unless content_type.respond_to?(:media_type)
+
+      original_content_type.blank? || (original_content_type.media_type == content_type.media_type)
+    end
 
     def ensure_required_accessors! #:nodoc:
       %w(file_name).each do |field|
