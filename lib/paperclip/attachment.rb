@@ -106,7 +106,7 @@ module Paperclip
       uploaded_filename          ||= uploaded_file.original_filename
       @queued_for_write[:original] = to_tempfile(uploaded_file)
       uploaded_content_type        = extract_content_type(@queued_for_write[:original])
-      instance_write(:file_name,     uploaded_filename.strip)
+      instance_write(:file_name,     uploaded_filename.try(:strip))
       instance_write(:content_type,  uploaded_content_type)
       instance_write(:file_size,     @queued_for_write[:original].size.to_i)
       instance_write(:fingerprint,   generate_fingerprint(uploaded_file))
