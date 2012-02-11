@@ -115,6 +115,8 @@ module Paperclip
       if valid_media_type?(format_content_type)
         instance_write(:file_name,    real_filename)
         instance_write(:content_type, format_content_type)
+      else
+        instance_write(:file_name,    content_type_filename)
       end
 
       @dirty = true
@@ -361,6 +363,29 @@ module Paperclip
       end
     end
 
+    def content_type_filename
+      original_filename     = self.original_filename or return
+      original_content_type = self.content_type      or return original_filename
+      original_extension    = File.extname(original_filename)
+      original_basename     = File.basename(original_filename, original_extension)
+      original_extension    = original_extension.sub(/^\.+/, '')
+
+      mime_type  = MIME::Types[original_content_type]
+      extensions = mime_type.empty? ? [] : mime_type.first.extensions
+
+      extension = if extensions.include?(original_extension)
+        original_extension
+      elsif extensions.present?
+        extensions.first
+      end
+
+      if extension.present?
+        original_basename + '.' + extension
+      else
+        original_filename
+      end
+    end
+
     def format_content_type
       content_type = self.content_type
       filename     = self.original_filename or return content_type
@@ -376,10 +401,7 @@ module Paperclip
       original_content_type = self.content_type
 
       original_content_type = MIME::Type.new(original_content_type) if original_content_type.is_a?(String)
-      content_type          = MIME::Type.new(content_type)          if content_type.is_a?(String)
-      return false unless content_type.respond_to?(:media_type)
-
-      original_content_type.blank? || (original_content_type.media_type == content_type.media_type)
+      original_content_type.present? && (original_content_type.media_type == 'image')
     end
 
     def ensure_required_accessors! #:nodoc:
