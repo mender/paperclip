@@ -1,3 +1,5 @@
+require 'paperclip/interpolated_string'
+
 module Paperclip
   # This module contains all the methods that are available for interpolation
   # in paths and urls. To add your own (or override an existing one), you
@@ -29,11 +31,13 @@ module Paperclip
     # an interpolation pattern for Paperclip to use.
     def self.interpolate pattern, *args
       pattern = args.first.instance.send(pattern) if pattern.kind_of? Symbol
-      all.reverse.inject( pattern.dup ) do |result, tag|
+      interpolated_string = all.reverse.inject(InterpolatedString.new(pattern)) do |result, tag|
         result.gsub(/:#{tag}/) do |match|
           send( tag, *args )
         end
       end
+      interpolated_string.force_escape if pattern =~ /:url/
+      interpolated_string
     end
 
     # Returns the filename, the same way as ":basename.:extension" would.
@@ -86,7 +90,7 @@ module Paperclip
 
     # Returns the basename of the file. e.g. "file" for "file.jpg"
     def basename attachment, style_name
-      attachment.original_filename.gsub(/#{File.extname(attachment.original_filename)}$/, "")
+      attachment.original_filename.gsub(/#{Regexp.escape(File.extname(attachment.original_filename))}$/, "")
     end
 
     # Returns the extension of the file. e.g. "jpg" for "file.jpg"
