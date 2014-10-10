@@ -61,9 +61,7 @@ module Paperclip
         protected
 
         def type_allowed?(type)
-          file = MockIO.new(".")
-          file.content_type = type
-          (subject = @subject.new).attachment_for(@attachment_name).assign(file)
+          (subject = @subject.new).send("#{@attachment_name}_content_type=", type)
           subject.valid?
           subject.errors[:"#{@attachment_name}_content_type"].blank?
         end
@@ -74,20 +72,6 @@ module Paperclip
 
         def rejected_types_rejected?
           !@rejected_types.any? { |type| type_allowed?(type) }
-        end
-      end
-
-      class MockIO < StringIO
-        def original_filename
-          @original_filename ||= nil
-        end
-
-        def type_from_file_command
-          content_type
-        end
-
-        def to_tempfile
-          self
         end
       end
     end

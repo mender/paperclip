@@ -65,11 +65,16 @@ module Paperclip
         def passes_validation_with_size(new_size)
           file = StringIO.new(".")
           override_method(file, :size){ new_size }
+
           override_method(file, :to_tempfile){ file }
 
-          (subject = @subject.new).send(@attachment_name).assign(file)
+          (subject = @subject.new).send(@attachment_name).post_processing = false
+          subject.send(@attachment_name).assign(file)
+
           subject.valid?
           subject.errors[:"#{@attachment_name}_file_size"].blank?
+        ensure
+          subject.send(@attachment_name).post_processing = true
         end
 
         def lower_than_low?
